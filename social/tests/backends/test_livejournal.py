@@ -8,7 +8,7 @@ from social.exceptions import AuthMissingParameter
 from social.tests.backends.open_id import OpenIdTest
 
 
-JANRAIN_NONCE = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+JANRAIN_NONCE = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
 class LiveJournalOpenIdTest(OpenIdTest):
