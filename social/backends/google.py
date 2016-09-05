@@ -54,20 +54,13 @@ class BaseGoogleOAuth2API(BaseGoogleAuth):
         """Return list with needed access scope"""
         scope = self.setting('SCOPE', [])
         if not self.setting('IGNORE_DEFAULT_SCOPE', False):
-            default_scope = []
-            if self.setting('USE_DEPRECATED_API', False):
-                default_scope = self.DEPRECATED_DEFAULT_SCOPE
-            else:
-                default_scope = self.DEFAULT_SCOPE
+            default_scope = self.DEFAULT_SCOPE
             scope = scope + (default_scope or [])
         return scope
 
     def user_data(self, access_token, *args, **kwargs):
         """Return user data from Google API"""
-        if self.setting('USE_DEPRECATED_API', False):
-            url = 'https://www.googleapis.com/oauth2/v1/userinfo'
-        else:
-            url = 'https://www.googleapis.com/plus/v1/people/me'
+        url = 'https://www.googleapis.com/oauth2/v3/userinfo'
         return self.get_json(url, params={
             'access_token': access_token,
             'alt': 'json'
@@ -84,8 +77,8 @@ class GoogleOAuth2(BaseGoogleOAuth2API, BaseOAuth2):
     """Google OAuth2 authentication backend"""
     name = 'google-oauth2'
     REDIRECT_STATE = False
-    AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/auth'
-    ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
+    AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
+    ACCESS_TOKEN_URL = 'https://www.googleapis.com/oauth2/v4/token'
     ACCESS_TOKEN_METHOD = 'POST'
     REVOKE_TOKEN_URL = 'https://accounts.google.com/o/oauth2/revoke'
     REVOKE_TOKEN_METHOD = 'GET'
@@ -102,15 +95,9 @@ class GoogleOAuth2(BaseGoogleOAuth2API, BaseOAuth2):
     ]
 
 
-class GooglePlusAuth(BaseGoogleOAuth2API, BaseOAuth2):
+class GooglePlusAuth(GoogleOAuth2):
     name = 'google-plus'
-    REDIRECT_STATE = False
     STATE_PARAMETER = False
-    AUTHORIZATION_URL = 'https://accounts.google.com/o/oauth2/auth'
-    ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
-    ACCESS_TOKEN_METHOD = 'POST'
-    REVOKE_TOKEN_URL = 'https://accounts.google.com/o/oauth2/revoke'
-    REVOKE_TOKEN_METHOD = 'GET'
     DEFAULT_SCOPE = [
         'https://www.googleapis.com/auth/plus.login',
         'https://www.googleapis.com/auth/plus.me',
@@ -140,7 +127,7 @@ class GooglePlusAuth(BaseGoogleOAuth2API, BaseOAuth2):
         if 'access_token' in self.data:  # Client-side workflow
             token = self.data.get('access_token')
             response = self.get_json(
-                'https://www.googleapis.com/oauth2/v1/tokeninfo',
+                'https://www.googleapis.com/oauth2/v3/tokeninfo',
                 params={'access_token': token}
             )
             self.process_error(response)
@@ -160,47 +147,9 @@ class GooglePlusAuth(BaseGoogleOAuth2API, BaseOAuth2):
             raise AuthMissingParameter(self, 'access_token or code')
 
 
-class GoogleOAuth(BaseGoogleAuth, BaseOAuth1):
-    """Google OAuth authorization mechanism"""
-    name = 'google-oauth'
-    AUTHORIZATION_URL = 'https://www.google.com/accounts/OAuthAuthorizeToken'
-    REQUEST_TOKEN_URL = 'https://www.google.com/accounts/OAuthGetRequestToken'
-    ACCESS_TOKEN_URL = 'https://www.google.com/accounts/OAuthGetAccessToken'
-    DEFAULT_SCOPE = ['https://www.googleapis.com/auth/userinfo#email']
-
-    def user_data(self, access_token, *args, **kwargs):
-        """Return user data from Google API"""
-        return self.get_querystring(
-            'https://www.googleapis.com/userinfo/email',
-            auth=self.oauth_auth(access_token)
-        )
-
-    def get_key_and_secret(self):
-        """Return Google OAuth Consumer Key and Consumer Secret pair, uses
-        anonymous by default, beware that this marks the application as not
-        registered and a security badge is displayed on authorization page.
-        http://code.google.com/apis/accounts/docs/OAuth_ref.html#SigningOAuth
-        """
-        key_secret = super(GoogleOAuth, self).get_key_and_secret()
-        if key_secret == (None, None):
-            key_secret = ('anonymous', 'anonymous')
-        return key_secret
-
-
-class GoogleOpenId(OpenIdAuth):
-    name = 'google'
-    URL = 'https://www.google.com/accounts/o8/id'
-
-    def get_user_id(self, details, response):
-        """
-        Return user unique id provided by service. For google user email
-        is unique enought to flag a single user. Email comes from schema:
-        http://axschema.org/contact/email
-        """
-        return details['email']
-
-
 class GoogleOpenIdConnect(GoogleOAuth2, OpenIdConnectAuth):
+    """Google OpenID Connect."""
+
     name = 'google-openidconnect'
     ID_TOKEN_ISSUER = "accounts.google.com"
 
