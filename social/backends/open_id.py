@@ -328,7 +328,7 @@ class OpenIdConnectAuth(BaseOAuth2):
         client_id, _client_secret = self.get_key_and_secret()
 
         decode_kwargs = {
-            'algorithms': ['HS256'],
+            'algorithms': getattr(self, "JWT_ALGO", None) or ('HS256', ),
             'audience': client_id,
             'issuer': self.ID_TOKEN_ISSUER,
             'key': self.setting('ID_TOKEN_DECRYPTION_KEY'),
